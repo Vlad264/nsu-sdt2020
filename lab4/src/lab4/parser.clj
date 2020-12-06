@@ -3,7 +3,7 @@
 
 (defn lexer
     "Lexer to parse input string"
-    [str]
+    [string]
         (map 
             #(cond
                 (= % \1) ::true
@@ -14,7 +14,7 @@
                 (= % \>) ::impl
                 (= % \() ::open
                 (= % \)) ::close
-                :else (list ::sym (keyword (str %)))) str)) 
+                :else (list ::sym (keyword (str %)))) string)) 
 
 (declare rpn)
 
@@ -34,22 +34,22 @@
     "Build Reverse Polish Notation from input tokens"
     [tokens result stack]
         (let [token (first tokens)
-              rest (rest tokens)]
+              rest-tokens (rest tokens)]
             (cond 
                 (= token ::true)
-                    (rpn rest (conj result token) stack)
+                    (rpn rest-tokens (conj result token) stack)
                 (= token ::false)
-                    (rpn rest (conj result token) stack)
+                    (rpn rest-tokens (conj result token) stack)
                 (= token ::and)
                     (cons-to-stack #(or (= % ::not) (= % ::and)) tokens result stack)
                 (= token ::or)
                     (cons-to-stack #(or (= % ::not) (= % ::and) (= % ::or)) tokens result stack)
                 (= token ::not)
-                    (rpn rest result (cons token stack))
+                    (rpn rest-tokens result (cons token stack))
                 (= token ::impl)
                     (cons-to-stack #(or (= % ::not) (= % ::and)) tokens result stack)
                 (= token ::open)
-                    (rpn rest result (cons token stack))
+                    (rpn rest-tokens result (cons token stack))
                 (= token ::close)
                     (let [pop (take-while #(not (= % ::open)) stack)
                           rest-stack (drop-while #(not (= % ::open)) stack)]
@@ -60,7 +60,7 @@
                                 (vec (concat result pop)))
                             (rest rest-stack)))
                 (= (first token) ::sym)
-                    (rpn rest (conj result token) stack)
+                    (rpn rest-tokens (conj result token) stack)
                 :else
                     (if (empty? stack)
                         result
@@ -68,24 +68,24 @@
 
 (defn parse
     "Parse input string to api"
-    ([str] (parse (rpn (lexer str) [] `()) `()))
+    ([string] (parse (rpn (lexer string) [] `()) `()))
     ([rpn stack]
         (let [token (first rpn)
-              rest (rest rpn)]
+              rest-rpn (rest rpn)]
             (cond
                 (= token ::true)
-                    (parse rest (cons (constant true) stack))
+                    (parse rest-rpn (cons (constant true) stack))
                 (= token ::false)
-                    (parse rest (cons (constant false) stack))
+                    (parse rest-rpn (cons (constant false) stack))
                 (= token ::and)
-                    (parse rest (cons (dnf-and (second stack) (first stack)) (drop 2 stack)))
+                    (parse rest-rpn (cons (dnf-and (second stack) (first stack)) (drop 2 stack)))
                 (= token ::or)
-                    (parse rest (cons (dnf-or (second stack) (first stack)) (drop 2 stack)))
+                    (parse rest-rpn (cons (dnf-or (second stack) (first stack)) (drop 2 stack)))
                 (= token ::not)
-                    (parse rest (cons (dnf-not (first stack)) (rest stack)))
+                    (parse rest-rpn (cons (dnf-not (first stack)) (rest stack)))
                 (= token ::impl)
-                    (parse rest (cons (dnf-impl (second stack) (first stack)) (drop 2 stack)))
+                    (parse rest-rpn (cons (dnf-impl (second stack) (first stack)) (drop 2 stack)))
                 (= (first token) ::sym)
-                    (parse rest (cons (variable (second token)) stack))
+                    (parse rest-rpn (cons (variable (second token)) stack))
                 :else
                     (first stack)))))
