@@ -39,18 +39,7 @@
         (= (variable-name v1)
            (variable-name v2))))
 
-(defn leaf?
-    "Check if it leaf node (variable or constant)"
-    [expr]
-    (or
-        (variable? expr)
-        (constant? expr)))
-
 ;; =================================== And ===================================
-
-(defn args
-    "Get arguments of expression"
-    [expr] (rest expr))
 
 (defn dnf-and
     "Constructor for conjunctions operation"
@@ -96,85 +85,37 @@
     "Check if expression is implication"
     [expr] (= (first expr) ::impl))
 
-(defn impl-first-arg
+(defn dnf-impl-first
     "Get first argument of implication"
     [expr]
     {:pre (dnf-impl? expr)}
     (first (rest expr)))
 
-(defn impl-second-arg
+(defn dnf-impl-second
     "Get second argument of implication"
     [expr]
     {:pre (dnf-impl? expr)}
     (last (rest expr)))
 
-;; ================== Utils ==================
+;; =================================== Args ===================================
 
-(defn dnf-of-type [expr args] (cons (first expr) args))
+(defn args
+    "Return arguments of expression"
+    [expr] (rest expr))
 
-(defn same-type?
-    "Check that expr1 and expr2 have same type"
-    [expr1 expr2] (= (first expr1) (first expr2)))
-
-(defn same-expr-strict?
-    "Check if two expressions is same"
-    [expr1 expr2]
-    (if (not (same-type? expr1 expr2))
-        false
-        (cond
-            (variable? expr1) (same-variables? expr1 expr2)
-            (constant? expr1) (= (constant-value expr1) (constant-value expr2))
-            :else (->> (map #(same-expr-strict? %1 %2) (args expr1) (args expr2))
-                       (every? true?)))))
-
-(defn same-expr?
-    [expr1 expr2]
-    (cond
-        (= expr1 expr2) true
-        (same-type? expr1 expr2) (cond
-                                     (variable? expr1) (same-variables? expr1 expr2)
-                                     (constant? expr1) (= (constant-value expr1) (constant-value expr2))
-                                     :else (let [aa (first (args expr1)) ab (last (args expr1))
-                                                 ba (first (args expr2)) bb (last (args expr2))]
-                                               (or
-                                                   (and
-                                                       (same-expr? aa ba)
-                                                       (same-expr? ab bb))
-                                                   (and
-                                                       (same-expr? aa bb)
-                                                       (same-expr? ab ba)))))
-        :else false))
-
-(defn update-args [expr new-args]
+(defn update-args 
+    "Update arguments in expression"
+    [expr new-args]
     (if (> (count new-args) 1)
         (cons (first expr) new-args)
         (list (first expr) (first new-args))))
 
-(defn compose
-    "(a*b*c) -> (a*(b*c))"
+(defn collect-args
+    "Recursively collect arguments with same type"
     [expr]
-    (if (> (count (args expr)) 2)
-        (reduce (fn [acc x] (dnf-of-type acc (list acc x))) (dnf-of-type expr (take 2 (args expr))) (drop 2 (args expr)))
-        expr))
-
-(defn- collect-args
-    [expr]
-    (if (leaf? expr)
-        (list expr)
-        (->> (args expr)
-             (map (fn [arg] (if (same-type? expr arg)
-                                (collect-args arg)
-                                (list arg))))
-             (apply concat))))
-(defn decompose
-    "(a*(b*c)) -> (a*b*c)"
-    [expr]
-    (if (and (not (leaf? expr))
-             (or
-                 (dnf-or? expr)
-                 (dnf-and? expr))
-             )
-        (update-args expr (map #(decompose %) (collect-args expr)))
-        expr))
-
-
+    (apply concat 
+        (map
+            #(if (= (first expr) (first %))
+                (collect-args %)
+                (list %))
+            (args expr))))
