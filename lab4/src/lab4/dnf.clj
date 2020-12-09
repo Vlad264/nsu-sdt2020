@@ -64,6 +64,16 @@
         (update-args expr (collect-args expr))
         expr))
 
+(defn replace-variable
+    "Replace variables using var-map"
+    [expr var-map]
+    (if (and (not (empty? var-map)) (variable? expr))
+        (let [var-name (variable-name expr)]
+            (if (contains? var-map var-name)
+                (constant (get var-map var-name))
+                expr))
+        expr))
+
 (defn simplify
     "Siplify expressions with constant"
     [expr]
@@ -85,11 +95,14 @@
 
 (defn to-dnf
     "Transforms expression to dnf"
-    [expr]
-    (->> expr
-        (apply-recur remove-implication)
-        (apply-recur apply-not-to-brackets)
-        (apply-recur apply-distributive-property)
-        (apply-recur apply-decompose)
-        (apply-recur simplify)
-        ))
+    ([expr]
+        (to-dnf expr `()))
+    ([expr var-map]
+    (let [replace-by-var-map #(replace-variable % var-map)]
+        (->> expr
+            (apply-recur remove-implication)
+            (apply-recur apply-not-to-brackets)
+            (apply-recur apply-distributive-property)
+            (apply-recur apply-decompose)
+            (apply-recur replace-by-var-map)
+            (apply-recur simplify)))))
