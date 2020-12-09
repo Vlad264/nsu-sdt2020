@@ -32,7 +32,9 @@
                 (dnf-and? next-expr)
                     (apply dnf-or (map #(dnf-not %) (args next-expr)))
                 (dnf-or? next-expr)
-                    (apply dnf-and (map #(dnf-not %) (args next-expr)))))
+                    (apply dnf-and (map #(dnf-not %) (args next-expr)))
+                :else
+                    expr))
         expr))
 
 (defn distributive-property
@@ -89,4 +91,5 @@
         (apply-recur apply-not-to-brackets)
         (apply-recur apply-distributive-property)
         (apply-recur apply-decompose)
-        (apply-recur simplify)))
+        (apply-recur simplify)
+        ))
